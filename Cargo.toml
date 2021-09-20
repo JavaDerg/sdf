@@ -1,0 +1,9 @@
+[package]
+name = "sdf"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+rayon = "1.5.1"
+nalgebra = "0.29.0"
+fastrand = "1.5.0"
