@@ -75,10 +75,10 @@ fn main() {
             sensor: Point2::from_slice(&[18.0*ASPECT_RATIO, 18.0])
         }, Box::new(
             Union(
-                Sphere(0.5, Vector3::new(0.75, 0.0, 10.0)),
+                Sphere(0.5, Vector3::new(0.75, 0.0, 10.0), 0),
                 Union(
-                    Sphere(0.75, Vector3::new(0.0, 0.0, 10.0)),
-                    Sphere(1.0, Vector3::new(-1.0, 0.0, 10.0))
+                    Sphere(0.75, Vector3::new(0.0, 0.0, 10.0), 1),
+                    Sphere(1.0, Vector3::new(-1.0, 0.0, 10.0), 2)
                 )
             )
         ));
@@ -109,25 +109,51 @@ fn render_row(world: &World, pxs: &mut [Vector4<f32>], height: f32) {
     }
 }
 
+fn id2color(id: u32) -> Vector4<f32> {
+    match id {
+        0 => Vector4::new(1.0, 0.0, 0.0, 1.0),
+        1 => Vector4::new(0.0, 1.0, 0.0, 1.0),
+        2 => Vector4::new(0.0, 0.0, 1.0, 1.0),
+        _ => unreachable!()
+    }
+}
+
 fn shader(world: &World, mut dir: Vector3<f32>) -> Vector4<f32> {
     let mut step = world.0.origin.clone();
     let mut dist = world.1.distance(&step);
+
+    let mut color_sum = Vector4::new(0.0, 0.0, 0.0, 1.0);
+    if dist < 0.01 {
+        color_sum += id2color(world.1.id(&step));
+    }
     let mut steps = 0.0f32;
     while dist.abs() > THRESHOLD {
         steps += 1.0;
         step += dir * dist;
         dist = world.1.distance(&step);
+        if dist < 0.01 {
+            color_sum += id2color(world.1.id(&step)) * (1.0 / dist);
+        }
         if dist > MAX_DIST {
             let mut fancy = steps / (&step - &world.0.origin).norm().max(THRESHOLD);
             if fancy < 0.7 {
                 fancy = 0.0;
             }
-            return Vector4::new(fancy, fancy, fancy, 1.0);// + background_shader(world, &dir);
+            color_sum.w = 0.0;
+            color_sum.normalize_mut();
+            color_sum *= fancy;
+            color_sum.w = 1.0;
+            return color_sum; // + background_shader(world, &dir);
         }
     }
 
     let fancy = steps / 10.0 / (&step - &world.0.origin).norm().max(THRESHOLD);
-    Vector4::new(fancy, fancy, fancy, 1.0)
+    color_sum.w = 0.0;
+    color_sum.normalize_mut();
+    color_sum *= fancy;
+    color_sum.w = 1.0;
+    color_sum
+    // Vector4::new(fancy, fancy, fancy, 1.0)
 
     //
 
